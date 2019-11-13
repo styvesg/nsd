@@ -289,7 +289,7 @@ def model_space_tensor(
     rbt = nt - nbt * bt
     assert rbt==0, "the candidate batch size must be an exact divisor of the total number of candidates"
     ### CHOOSE THE INPUT VARIABLES
-    print 'CREATING SYMBOLS\n'
+    print ('CREATING SYMBOLS\n')
     if _symbolic_feature_maps is None:
         _fmaps, fmap_sizes = [], []
         for d in datas:
@@ -310,16 +310,16 @@ def model_space_tensor(
     _smsts, nf = create_shared_batched_feature_maps_gaussian_weights(fmap_sizes, 1, bt, verbose=verbose)
     _mst_data = make_mst_data(_fmaps, _smsts)  
     if verbose:
-        print ">> Storing the full modelspace tensor will require approx %.03fGb of RAM!" % (fpX(n*nf*nt*4) / 1024**3)
-        print ">> Will be divided in chunks of %.03fGb of VRAM!\n" % ((fpX(n*nf*bt*4) / 1024**3))
-    print 'COMPILING...'
+        print (">> Storing the full modelspace tensor will require approx %.03fGb of RAM!" % (fpX(n*nf*nt*4) / 1024**3))
+        print (">> Will be divided in chunks of %.03fGb of VRAM!\n" % ((fpX(n*nf*bt*4) / 1024**3)))
+    print ('COMPILING...')
     sys.stdout.flush()
     comp_t = time.time()
     mst_data_fn  = theano.function(_invars, _mst_data)
-    print '%.2f seconds to compile theano functions' % (time.time()-comp_t)
+    print ('%.2f seconds to compile theano functions' % (time.time()-comp_t))
     ### EVALUATE MODEL SPACE TENSOR
     start_time = time.time()
-    print "\nPrecomputing mst candidate responses..."
+    print ("\nPrecomputing mst candidate responses...")
     sys.stdout.flush()
     mst_data = np.ndarray(shape=(n,nf,1,nt), dtype=fpX)   
     if dry_run:
@@ -331,10 +331,10 @@ def model_space_tensor(
             args = slice_arraylist(datas, excerpt)  
             mst_data[excerpt,:,:,t*bt:(t+1)*bt] = mst_data_fn(*args)
     full_time = time.time() - start_time
-    print "%d mst candidate responses took %.3fs @ %.3f models/s" % (nt, full_time, fpX(nt)/full_time)
+    print ("%d mst candidate responses took %.3fs @ %.3f models/s" % (nt, full_time, fpX(nt)/full_time))
     ### OPTIONAL NONLINEARITY
     if nonlinearity:
-        print "Applying nonlinearity to modelspace tensor..."
+        print ("Applying nonlinearity to modelspace tensor...")
         sys.stdout.flush()
         for rr, rl in tqdm(iterate_slice(0, mst_data.shape[3], bt)): 
             mst_data[:,:,:,rr] = nonlinearity(mst_data[:,:,:,rr])
@@ -344,9 +344,9 @@ def model_space_tensor(
     if zscore:
         if trn_size==None:
             trn_size = len(mst_data)
-        print "Z-scoring modelspace tensor..."
+        print ("Z-scoring modelspace tensor...")
         if mst_avg is not None and mst_std is not None:
-            print "Using provided z-scoring values."
+            print ("Using provided z-scoring values.")
             sys.stdout.flush()
             assert mst_data.shape[1:]==mst_avg.shape[1:], "%s!=%s" % (mst_data.shape[1:], mst_avg.shape[1:])
             assert mst_data.shape[1:]==mst_std.shape[1:], "%s!=%s" % (mst_data.shape[1:], mst_avg.shape[1:])
@@ -357,7 +357,7 @@ def model_space_tensor(
                 mst_data[:,:,:,rr] /= mst_std_loc[:,:,:,rr]
                 mst_data[:,:,:,rr] = np.nan_to_num(mst_data[:,:,:,rr])        
         else: # calculate the z-score stat the first time around.
-            print "Using self z-scoring values."
+            print ("Using self z-scoring values.")
             sys.stdout.flush()
             mst_avg_loc = np.ndarray(shape=(1,)+mst_data.shape[1:], dtype=fpX)
             mst_std_loc = np.ndarray(shape=(1,)+mst_data.shape[1:], dtype=fpX)
@@ -379,7 +379,7 @@ def learn_params_ridge_regression(mst_data, voxels, lambdas, voxel_batch_size, h
     _Xout = T.matrix() # [#sample, #feature]
     _Vtrn = T.matrix()  # [#sample, #voxel]
     _Vout = T.matrix()  # [#sample, #voxel]
-    print 'COMPILING'
+    print ('COMPILING')
     t = time.time()
     ### pre-factor
     _cov = T.dot(_Xtrn.T, _Xtrn)
@@ -390,7 +390,7 @@ def learn_params_ridge_regression(mst_data, voxels, lambdas, voxel_batch_size, h
     ### 
     factor_fn = theano.function([_Xtrn], _cofactor)
     score_fn  = theano.function([_Ytrn, _Vtrn, _Xout, _Vout], [_beta, _loss])
-    print '%.2f seconds to compile theano functions'%(time.time()-t)
+    print ('%.2f seconds to compile theano functions'%(time.time()-t))
     # shuffle
     nt,nf,_,nc = mst_data.shape
     _,nv = voxels.shape
@@ -436,11 +436,11 @@ def learn_params_ridge_regression(mst_data, voxels, lambdas, voxel_batch_size, h
     return_params = [best_w_params[:,:nf],]
     if add_bias:
         return_params += [best_w_params[:,-1],]
-    print '-------------------------'
-    print 'total time = %fs' % total_time
-    print 'total throughput = %fs/voxel' % (total_time / nv)
-    print 'voxel throughput = %fs/voxel' % (vox_loop_time / nv)
-    print 'setup throughput = %fs/candidate' % (inv_time / nc)
+    print ('-------------------------')
+    print ('total time = %fs' % total_time)
+    print ('total throughput = %fs/voxel' % (total_time / nv))
+    print ('voxel throughput = %fs/voxel' % (vox_loop_time / nv))
+    print ('setup throughput = %fs/candidate' % (inv_time / nc))
     return best_scores, best_lambdas, best_candidates, return_params
 
 
@@ -469,9 +469,9 @@ def batched_learn_params_ridge_regression(
     best_std = np.zeros(shape=(nv, nf), dtype=fpX)
     
     for mr, ml in iterate_range(0,len(models),model_batch_size):
-        print "================================================"
-        print "==> Candidate block %d--%d" % (mr[0], mr[-1])
-        print "================================================"
+        print ("================================================")
+        print ("==> Candidate block %d--%d of %d" % (mr[0], mr[-1], len(models)))
+        print ("================================================")
         sys.stdout.flush()
         model_block = models[mr]
         # fmaps take a lot of space. I may be able to build the mst in batch.
@@ -543,19 +543,19 @@ def get_prediction_from_mst(mst_data, mst_rel_models, w_params, batches=(1,1), v
     assert len(mst_rel_models)==nv ## voxelmodels interpreted as relative model  
     assert mst_rel_models.dtype==int
     if verbose:
-        print "%d voxel batches of size %d with residual %d" % (nbv, bv, rbv) 
-        print "%d sample batches of size %d with residual %d" % (nbt, bt, rbt) 
-        print 'CREATING SYMBOLS\n'
+        print ("%d voxel batches of size %d with residual %d" % (nbv, bv, rbv) )
+        print ("%d sample batches of size %d with residual %d" % (nbt, bt, rbt) )
+        print ('CREATING SYMBOLS\n')
     _mst_data = T.tensor4()
     _fwrf_pred, fwrf_params = make_batched_regression(_mst_data, nf, bv, 1, add_bias=len(w_params)==2)
     ###
     if verbose:
-        print 'COMPILING...'
+        print ('COMPILING...')
         sys.stdout.flush()
     comp_t = time.time()
     fwrf_pred_fn = theano.function([_mst_data], _fwrf_pred[:,:,0])     
     if verbose:   
-        print '%.2f seconds to compile theano functions' % (time.time()-comp_t)
+        print ('%.2f seconds to compile theano functions' % (time.time()-comp_t))
         sys.stdout.flush()
     predictions = np.zeros(shape=(nt, nv), dtype=fpX)
     ### VOXEL BATCH LOOP
@@ -576,7 +576,7 @@ def get_prediction_from_mst(mst_data, mst_rel_models, w_params, batches=(1,1), v
         predictions[:,rv] = pred[:,:lv]
     set_shared_parameters(fwrf_params)     
     if verbose: 
-        print "time spent slicing mst: %.2fs: %.2fs/it " % (slice_time, slice_time*bv/nv)
+        print ("time spent slicing mst: %.2fs: %.2fs/it " % (slice_time, slice_time*bv/nv))
     sys.stdout.flush()
     return predictions
 
@@ -634,7 +634,7 @@ def get_symbolic_prediction(_symbolic_feature_maps, fmaps_sizes, rf_params, w_pa
     nf = np.sum([fm[1] for fm in fmaps_sizes])
     nv = rf_params.shape[0]
     assert rf_params.shape[1]==3
-    print 'CREATING SYMBOLS\n'
+    print ('CREATING SYMBOLS\n')
     _smsts,_ = create_shared_batched_feature_maps_gaussian_weights(fmaps_sizes, nv, 1, verbose=True)
     shared_var['fpf_weight'] = _smsts
     if avg is not None:
@@ -653,7 +653,7 @@ def get_symbolic_prediction(_symbolic_feature_maps, fmaps_sizes, rf_params, w_pa
     return _fwrf_pred.flatten(ndim=2), shared_var
 
 
-def get_prediction(fmaps, rf_params, w_params, avg, std, _nonlinearity, view_angle, sample_batch_size=1000, voxel_batch_size=100, verbose=False):
+def get_prediction_from_fmaps(fmaps, rf_params, w_params, avg, std, _nonlinearity, view_angle, sample_batch_size=1000, voxel_batch_size=100, verbose=False):
     nt, nv = len(fmaps[0]), len(rf_params)
     bv = min(voxel_batch_size, nv)
     _fmaps = [T.tensor4() for f in fmaps]
@@ -691,8 +691,22 @@ def get_prediction(fmaps, rf_params, w_params, avg, std, _nonlinearity, view_ang
     return predictions
 
 
-
-
+def get_prediction(\
+        _symbolic_feature_maps, fmaps_sizes, _symbolic_input_vars, datas,\
+        best_rf_params, best_w_params, best_avg, best_std,\
+        _log_act_func, lx, sample_batch_size, voxel_batch_size):
+    ###
+    from src.data_preparation import get_dnn_feature_maps
+    print ('COMPILING')
+    t = time.time()
+    sfmaps_fn = theano.function(_symbolic_input_vars, _symbolic_feature_maps)
+    print ('%.2f seconds to compile theano functions'%(time.time()-t))
+    ###
+    val_fmaps = get_dnn_feature_maps(datas[0], sfmaps_fn, batch_size=sample_batch_size) 
+    val_pred  = get_prediction_from_fmaps(val_fmaps, best_rf_params, best_w_params, best_avg, best_std,\
+                              _log_act_func, lx, sample_batch_size, voxel_batch_size)
+    del val_fmaps
+    return val_pred
 
 
 ################################################################

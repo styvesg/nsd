@@ -62,11 +62,11 @@ def plot_rf_as_circles(rfs, smin, smax):
 
 
 def plot_pretty_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
-    color1 = '#1111ff'
-    color2 = '#ff4400'
+    #color1 = '#888888'
+    #color2 = '#888888'
     cmap = cm.get_cmap(cmap)    
-    #color1 = cmap(0.8)
-    #color2 = cmap(0.8)
+    color1 = cmap(0.4)
+    color2 = cmap(0.4)
     x = X
     y = Y
     
@@ -77,11 +77,6 @@ def plot_pretty_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
     ax1=g.ax_marg_x.hist(x,log=True, color=color1, bins=30, range=xlim) #distplot(color=".5",kde=False) #hist_kws={'log':True}
     ax2=g.ax_marg_y.hist(y,log=True, color=color2, bins=30, orientation='horizontal', range=ylim)
     
-    #adv = np.sum(ax1[0]) / (np.sum(ax1[0])+np.sum(ax2[0]))
-    #g.ax_marg_x.text(-0.55, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
-    #g.ax_marg_x.text( 0.45, 50., '%.2f' % (1.-adv), horizontalalignment='left', fontsize=18, color=color2, weight='bold')
-    #g.ax_marg_x.set_ylim([0.5, 5e2])
-    
     g.ax_marg_x.get_yaxis().reset_ticks()
     g.ax_marg_x.get_yaxis().set_ticks([1e0, 1e1, 1e2])
     g.ax_marg_x.get_yaxis().set_ticklabels([1e0, 1e1, 1e2])
@@ -91,12 +86,9 @@ def plot_pretty_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
     #g.ax_marg_y.set_visible(False)
 
     mm = [min(xlim[0],ylim[0]), max(xlim[1], ylim[1])]
-    g.ax_joint.plot(mm, mm, '--k', lw=2)
+    g.ax_joint.plot(mm, mm, '--r', lw=2)
     g.ax_joint.plot([threshold, threshold], [mm[0], threshold], '-r', lw=2)
     g.ax_joint.plot([mm[0], threshold], [threshold, threshold], '-r', lw=2)
-    #g.ax_joint.plot(xlim, np.ones(len(xlim)) * threshold, '--r', lw=2)
-    #g.ax_joint.plot([0., xlim[1]], [threshold, threshold -  xlim[1] / 2], '--r', lw=2)
-    #g.ax_joint.plot([xlim[0], 0.], [threshold +  xlim[0] / 2, threshold], '--r', lw=2)
     return g
 
 
@@ -119,8 +111,8 @@ def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim):
     ax2=g.ax_marg_x.hist(x[np.logical_and(mask, x>=0)],log=True, color=color2, bins=50, range=xlim) 
     
     adv = np.sum(ax1[0]) / (np.sum(ax1[0])+np.sum(ax2[0]))
-    g.ax_marg_x.text(-0.55, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
-    g.ax_marg_x.text( 0.45, 50., '%.2f' % (1.-adv), horizontalalignment='left', fontsize=18, color=color2, weight='bold')
+    g.ax_marg_x.text(-0.45, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
+    g.ax_marg_x.text( 0.35, 50., '%.2f' % (1.-adv), horizontalalignment='left', fontsize=18, color=color2, weight='bold')
     g.ax_marg_x.set_ylim([0.5, 5e2])
     
     g.ax_marg_x.get_yaxis().reset_ticks()
