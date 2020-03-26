@@ -19,21 +19,76 @@ import nibabel as nib
 def save_stuff(save_to_this_file, data_objects_dict):
     failed = []
     with h5py.File(save_to_this_file+'.h5py', 'w') as hf:
-        for k,v in data_objects_dict.iteritems():
+        for k,v in data_objects_dict.items():
             try:
                 hf.create_dataset(k,data=v)
-                print 'saved %s in h5py file' %(k)
+                print ('saved %s in h5py file' %(k))
             except:
                 failed.append(k)
-                print 'failed to save %s as h5py. will try pickle' %(k)   
+                print ('failed to save %s as h5py. will try pickle' %(k))
     for k in failed:
         with open(save_to_this_file+'_'+'%s.pkl' %(k), 'w') as pkl:
             try:
                 pickle.dump(data_objects_dict[k],pkl)
-                print 'saved %s as pkl' %(k)
+                print ('saved %s as pkl' %(k))
             except:
-                print 'failed to save %s in any format. lost.' %(k) 
+                print ('failed to save %s in any format. lost.' %(k))
                 
+def get_last_token(s, tokens={'/': list, '.': dict}):
+    l,name,entry,t = 2**31,'','',None
+    for tok,toktype in tokens.items():
+        ss = s.split(tok)
+        if len(ss)>1 and len(ss[-1])<l:
+            l = len(ss[-1])
+            entry = ss[-1]
+            name = tok.join(ss[:-1])
+            t = toktype
+    return name, entry, t
+
+
+def has_token(s, tokens={'/': list, '.': dict}):
+    isin = False
+    for tok in tokens:
+        if tok in s:
+            isin = True
+    return isin
+    
+def extend_list(l, i, v):
+    if len(l)<i+1:
+        l += [None,]*(i+1-len(l))
+    l[i] = v
+    return l
+
+def flatten_dict(base, append=''):
+    '''flatten nested dictionary and lists'''
+    flat = {}
+    for k,v in base.items():
+        if type(v)==dict:
+            flat.update(flatten_dict(v, append+k+'.'))
+        elif type(v)==list:
+            flat.update(flatten_dict({append+k+'/%d'%i: vv for i,vv in enumerate(v)}))
+        else:
+            flat[append+k] = v
+    return flat
+
+def embed_dict(fd):
+    d = {}
+    for k,v in fd.items():
+        name, entry, ty = get_last_token(k)
+        if ty==list:
+            if name in d.keys():
+                d[name] = extend_list(d[name], int(entry), v)
+            else:
+                d[name] = extend_list([], int(entry), v)
+        elif ty==dict:
+            if name in d.keys():
+                d[name].update({entry: v})
+            else:
+                d[name] = {entry: v}
+        else:
+            return fd
+    return embbed_dict(d)
+
 
 ### NIFTY STUFF ###
 def load_mask_from_nii(mask_nii_file):

@@ -62,8 +62,8 @@ def load_stimuli(path, load_hirez=True, npx=500, npc=1):
 
 
 
-
 def load_voxels(path, subject, voxel_subset=None):
+    '''Load beta values in the structure of the vim-1 experiment'''
     voxelset = h5py.File(path+"EstimatedResponses.mat")
 
     voxeldata = np.concatenate([voxelset['dataTrn%s'%subject], voxelset['dataVal%s'%subject]], axis=0).astype(dtype=np.float32)
