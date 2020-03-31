@@ -34,7 +34,7 @@ def save_stuff(save_to_this_file, data_objects_dict):
             except:
                 print ('failed to save %s in any format. lost.' %(k))
                 
-def get_last_token(s, tokens={'/': list, '.': dict}):
+def get_last_token(s, tokens={'@': list, '.': dict}):
     l,name,entry,t = 2**31,'','',None
     for tok,toktype in tokens.items():
         ss = s.split(tok)
@@ -46,7 +46,7 @@ def get_last_token(s, tokens={'/': list, '.': dict}):
     return name, entry, t
 
 
-def has_token(s, tokens={'/': list, '.': dict}):
+def has_token(s, tokens={'@': list, '.': dict}):
     isin = False
     for tok in tokens:
         if tok in s:
@@ -66,15 +66,16 @@ def flatten_dict(base, append=''):
         if type(v)==dict:
             flat.update(flatten_dict(v, append+k+'.'))
         elif type(v)==list:
-            flat.update(flatten_dict({append+k+'/%d'%i: vv for i,vv in enumerate(v)}))
+            flat.update(flatten_dict({append+k+'@%d'%i: vv for i,vv in enumerate(v)}))
         else:
             flat[append+k] = v
     return flat
 
 def embed_dict(fd):
     d = {}
+    
     for k,v in fd.items():
-        name, entry, ty = get_last_token(k)
+        name, entry, ty = get_last_token(k, {'@': list, '.': dict})
         if ty==list:
             if name in d.keys():
                 d[name] = extend_list(d[name], int(entry), v)
@@ -86,8 +87,8 @@ def embed_dict(fd):
             else:
                 d[name] = {entry: v}
         else:
-            return fd
-    return embbed_dict(d)
+            d[k] = v   
+    return embed_dict(d) if has_token(''.join(d.keys()), tokens={'@': list, '.': dict}) else d
 
 
 ### NIFTY STUFF ###
