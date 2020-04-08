@@ -62,8 +62,8 @@ def plot_rf_as_circles(rfs, smin, smax):
 
 
 def plot_pretty_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
-    #color1 = '#888888'
-    #color2 = '#888888'
+    from matplotlib.pyplot import cm 
+    from matplotlib.ticker import FormatStrFormatter
     cmap = cm.get_cmap(cmap)    
     color1 = cmap(0.4)
     color2 = cmap(0.4)
@@ -93,22 +93,24 @@ def plot_pretty_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
 
 
 
-def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim):
-    lim = 256.
-    start = map(lambda x: 1.*x/lim, (245,236,225)) #oatmeal
-    stop = map(lambda x: .5*x/lim, (137,205,187)) #aqua
-    cmap = sns.blend_palette([start,stop], as_cmap=True)
+def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
+    from matplotlib.pyplot import cm 
+    from matplotlib.ticker import FormatStrFormatter
+    cmap = cm.get_cmap(cmap)  
     color1 = '#084990'
     color2 = '#3989c1'
-    y = (X+Y)/2
-    x = (X-Y)
+    X, Y = np.nan_to_num(X), np.nan_to_num(Y)
+    x, y = (X-Y), (X+Y)/2 
     
-    g = sns.JointGrid(x, y, size=8, xlim=xlim, ylim=ylim)
+    g = sns.JointGrid(x, y, height=8, xlim=xlim, ylim=ylim)
     # marg. plot
     mask = np.logical_or(X>threshold, Y>threshold) #np.where(Xt[1]>threshold)[0]
     _=g.plot_joint(plt.hexbin, bins='log', gridsize=30, cmap='Blues', extent=xlim+ylim)
     ax1=g.ax_marg_x.hist(x[np.logical_and(mask, x<0)],log=True, color=color1, bins=50, range=xlim) #distplot(color=".5",kde=False) #hist_kws={'log':True}
     ax2=g.ax_marg_x.hist(x[np.logical_and(mask, x>=0)],log=True, color=color2, bins=50, range=xlim) 
+    
+    maxcount = max(np.max(ax1[0]), np.max(ax2[0]))
+    maxdecade = int(np.ceil(np.log10(maxcount)))
     
     adv = np.sum(ax1[0]) / (np.sum(ax1[0])+np.sum(ax2[0]))
     g.ax_marg_x.text(-0.45, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
@@ -116,8 +118,8 @@ def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim):
     g.ax_marg_x.set_ylim([0.5, 5e2])
     
     g.ax_marg_x.get_yaxis().reset_ticks()
-    g.ax_marg_x.get_yaxis().set_ticks([1e0, 1e1, 1e2])
-    g.ax_marg_x.get_yaxis().set_ticklabels([1e0, 1e1, 1e2])
+    g.ax_marg_x.get_yaxis().set_ticks([10**d for d in range(maxdecade)])
+    g.ax_marg_x.get_yaxis().set_ticklabels([10**d for d in range(maxdecade)])
     g.ax_marg_x.set_ylabel('Count', labelpad=10)
     g.ax_marg_x.get_yaxis().grid(True)
     g.ax_marg_x.get_yaxis().set_major_formatter(FormatStrFormatter('%d'))
@@ -127,6 +129,8 @@ def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim):
     #g.ax_joint.plot(xlim, np.ones(len(xlim)) * threshold, '--r', lw=2)
     g.ax_joint.plot([0., xlim[1]], [threshold, threshold -  xlim[1] / 2], '--r', lw=2)
     g.ax_joint.plot([xlim[0], 0.], [threshold +  xlim[0] / 2, threshold], '--r', lw=2)
+    plt.gca().set_xlabel('X-Y')
+    plt.gca().set_ylabel('(X+Y)/2')
     return g
     
 
