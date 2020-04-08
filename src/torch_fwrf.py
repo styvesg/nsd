@@ -85,7 +85,7 @@ def model_space(model_specs):
 
 
 class Torch_fwRF_voxel_block(nn.Module):
-    def __init__(self, _fmaps, models, params, mst_avg, mst_std, _nonlinearity=None, input_space=227, aperture=1.0):
+    def __init__(self, _fmaps_fn, models, params, mst_avg, mst_std, _nonlinearity=None, input_space=227, aperture=1.0):
         super(Torch_fwRF_voxel_block, self).__init__()
         
         self.aperture = aperture
@@ -144,7 +144,53 @@ class Torch_fwRF_voxel_block(nn.Module):
 
 
 def learn_params_ridge_regression(data, voxels, _fmaps_fn, models, lambdas, aperture=1.0, _nonlinearity=None, zscore=False, sample_batch_size=100, voxel_batch_size=100, holdout_size=100, shuffle=True, add_bias=False):
+    """
+    Learn the parameters of the fwRF model
 
+    Parameters
+    ----------
+    data : ndarray, shape (#samples, #channels, x, y)
+        Input image block.
+    voxels: ndarray, shape (#samples, #voxels)
+        Input voxel activities.
+    _fmaps_fn: Torch module
+        Torch module that returns a list of torch tensors.
+    models: ndarray, shape (#candidateRF, 3)
+        The (x, y, sigma) of all candidate RFs for gridsearch.
+    lambdas: ndarray, shape (#candidateRegression)
+        The rigde parameter candidates.
+    aperture (default: 1.0): scalar
+        The span of the stimulus in the unit used for the RF models.
+    _nonlinearity (default: None)
+        A nonlinearity expressed with torch's functions.
+    zscore (default: False)
+        Whether to zscore the feature maps or not.
+    sample_batch_size (default: 100)
+        The sample batch size (used where appropriate)
+    voxel_batch_size (default: 100) 
+        The voxel batch size (used where appropriate)
+    holdout_size (default: 100) 
+        The holdout size for model and hyperparameter selection
+    shuffle (default: True)
+        Whether to shuffle the training set or not.
+    add_bias (default: False)
+        Whether to add a bias term to the rigde regression or not.
+
+    Returns
+    -------
+    losses : ndarray, shape (#voxels)
+        The final loss for each voxel.
+    lambdas : ndarray, shape (#voxels)
+        The regression regularization index for each voxel.
+    models : ndarray, shape (#voxels, 3)
+        The RF model (x, y, sigma) associated with each voxel.
+    params : list of ndarray, shape (#voxels, #features)
+        Can contain a bias parameter of shape (#voxels) if add_bias is True.
+    mst_mean : ndarray, shape (#voxels, #feature)
+        None if zscore is False. Otherwise returns zscoring average per feature.
+    mst_std : ndarray, shape (#voxels, #feature)
+        None if zscore is False. Otherwise returns zscoring std.dev. per feature.
+    """
     def _cofactor_fn(_x, lambdas):
         '''input matrix [#samples, #features], a list of lambda values'''
         _f = torch.stack([(torch.mm(torch.t(_x), _x) + torch.eye(_x.size()[1], device=device) * l).inverse() for l in lambdas], axis=0) # [#lambdas, #feature, #feature]       
@@ -273,9 +319,38 @@ def learn_params_ridge_regression(data, voxels, _fmaps_fn, models, lambdas, aper
 
 
     
-def get_predictions(data, _fmaps_fn, models, params, mst_avg, mst_std, _nonlinearity=None, aperture=1.0, sample_batch_size=100, voxel_batch_size=100):
-    '''the forward fwRF model'''
+def get_predictions(data, _fmaps_fn, models, params, mst_avg=None, mst_std=None, aperture=1.0, _nonlinearity=None, sample_batch_size=100, voxel_batch_size=100):
+    """
+    The predictive fwRF model for arbitrary input image.
 
+    Parameters
+    ----------
+    data : ndarray, shape (#samples, #channels, x, y)
+        Input image block.
+    _fmaps_fn: Torch module
+        Torch module that returns a list of torch tensors.
+    models : ndarray, shape (#voxels, 3)
+        The RF model (x, y, sigma) associated with each voxel.
+    params : list of ndarray, shape (#voxels, #features)
+        Can contain a bias parameter of shape (#voxels) if add_bias is True.
+    mst_mean (optional): ndarray, shape (#voxels, #feature)
+        None if zscore is False. Otherwise returns zscoring average per feature.
+    mst_std (optional): ndarray, shape (#voxels, #feature)
+        None if zscore is False. Otherwise returns zscoring std.dev. per feature.
+    aperture (default: 1.0): scalar
+        The span of the stimulus in the unit used for the RF models.
+    _nonlinearity (default: None)
+        A nonlinearity expressed with torch's functions.
+    sample_batch_size (default: 100)
+        The sample batch size (used where appropriate)
+    voxel_batch_size (default: 100) 
+        The voxel batch size (used where appropriate)
+
+    Returns
+    -------
+    pred : ndarray, shape (#samples, #voxels)
+        The prediction of voxel activities for each voxels associated with the input data.
+    """
     dtype = params[0].dtype.type
     device = next(_fmaps_fn.parameters()).device
     if mst_avg is not None:
