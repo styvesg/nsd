@@ -16,5 +16,7 @@ This notebook details the training process of the model. The models are saved in
 - S7:
 - S8:
 
+Currently, these files are on "NAS/styvesg/nsd_results/p3_full_brain_analysis/"
+
 ## torched_alexnet_fwrf_reload.ipynb
 This notebook demonstrate reloading the saved parameters and test reproduction of the prediction validation accuracy. We also demonstrate how the pixel-gradient can be obtained.
