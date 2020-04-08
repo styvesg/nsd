@@ -15,6 +15,21 @@ import PIL.Image as pim
 import nibabel as nib
 
 
+#
+#
+#adict = {
+#    'something': 'itself',
+#    'list_of_dict': [{'x': 1}, {'y': 2, 'z': 3}],
+#    'dict_of_list': {'a': [1,2], 'b': [3,4]}
+#}
+#fdict = flatten_dict(adict)
+#edict = embed_dict(fdict)
+#print (adict)
+#print (fdict)
+#print (edict)
+#
+#
+
 
 def save_stuff(save_to_this_file, data_objects_dict):
     failed = []

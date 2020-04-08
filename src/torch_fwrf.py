@@ -85,6 +85,10 @@ def model_space(model_specs):
 
 
 class Torch_fwRF_voxel_block(nn.Module):
+    '''
+    This is a variant of the fwRF model as a module for a voxel block (we can't have it all at once)
+    '''
+
     def __init__(self, _fmaps_fn, models, params, mst_avg, mst_std, _nonlinearity=None, input_space=227, aperture=1.0):
         super(Torch_fwRF_voxel_block, self).__init__()
         
