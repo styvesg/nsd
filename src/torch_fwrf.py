@@ -89,11 +89,12 @@ class Torch_fwRF_voxel_block(nn.Module):
     This is a variant of the fwRF model as a module for a voxel block (we can't have it all at once)
     '''
 
-    def __init__(self, _fmaps_fn, models, params, mst_avg, mst_std, _nonlinearity=None, input_space=227, aperture=1.0):
+    def __init__(self, _fmaps_fn, params, _nonlinearity=None, input_space=227, aperture=1.0):
         super(Torch_fwRF_voxel_block, self).__init__()
         
         self.aperture = aperture
-        device = next(_fmaps.parameters()).device
+        models, weights, bias, mst_avg, mst_std = params
+        device = next(_fmaps_fn.parameters()).device
         _x =torch.empty(1, 3, input_space, input_space, device=device).uniform_(0, 1)
         _fmaps = _fmaps_fn(_x)
         self.fmaps_rez = []
@@ -107,10 +108,10 @@ class Torch_fwRF_voxel_block(nn.Module):
             self.pfs += [nn.Parameter(torch.from_numpy(pf).to(device), requires_grad=False),]
             self.register_parameter('pf%d'%k, self.pfs[-1])
             
-        self.params = [] 
-        for k,p in enumerate(params):
-            self.params += [nn.Parameter(torch.from_numpy(p).to(device), requires_grad=False),]
-            self.register_parameter('params%d'%k, self.params[-1])
+        self.weights = nn.Parameter(torch.from_numpy(weights).to(device), requires_grad=False)
+        self.bias = None
+        if bias is not None:
+            self.bias = nn.Parameter(torch.from_numpy(bias).to(device), requires_grad=False)
             
         self.mstm = None
         self.msts = None
@@ -119,13 +120,15 @@ class Torch_fwRF_voxel_block(nn.Module):
         if mst_std is not None:
             self.msts = nn.Parameter(torch.from_numpy(mst_std.T).to(device), requires_grad=False)
         self._nl = _nonlinearity
-        
-    def load_voxel_block(self, models, params, mst_avg, mst_std):
+              
+    def load_voxel_block(self, *params):
+        models, weights, bias, mst_avg, mst_std = params
         for _pf,n_pix in zip(self.pfs, self.fmaps_rez):
-            pf = pnu.make_gaussian_mass_stack(models[:,0], models[:,1], models[:,2], n_pix, size=aperture, dtype=np.float32)[2]
+            pf = pnu.make_gaussian_mass_stack(models[:,0], models[:,1], models[:,2], n_pix, size=self.aperture, dtype=np.float32)[2]
             set_value(_pf, pf)
-        for _p,p in zip(self.params, params):
-            set_value(_p, p)
+        set_value(self.weights, weights)
+        if bias is not None:
+            set_value(self.bias, bias)
         if mst_avg is not None:
             set_value(self.mstm, mst_avg.T)
         if mst_avg is not None:    
@@ -140,9 +143,9 @@ class Torch_fwRF_voxel_block(nn.Module):
         if self.msts is not None:
             _mst /= self.msts[None]
         _mst = torch.transpose(torch.transpose(_mst, 0, 2), 1, 2) # [#voxels, #samples, features]
-        _r = torch.squeeze(torch.bmm(_mst, torch.unsqueeze(self.params[0], 2))).t() # [#samples, #voxels]
-        if len(self.params)>1:
-            _r += torch.unsqueeze(self.params[1], 0)
+        _r = torch.squeeze(torch.bmm(_mst, torch.unsqueeze(self.weights, 2))).t() # [#samples, #voxels]
+        if self.bias is not None:
+            _r += torch.unsqueeze(self.bias, 0)
         return _r
 
 
@@ -314,16 +317,18 @@ def learn_params_ridge_regression(data, voxels, _fmaps_fn, models, lambdas, aper
     return_params = [best_w_params[:,:nf],]
     if add_bias:
         return_params += [best_w_params[:,-1],]
+    else: 
+        return_params += [None,]
     print ('\n---------------------------------------')
     print ('total time = %fs' % total_time)
     print ('total throughput = %fs/voxel' % (total_time / nv))
     print ('voxel throughput = %fs/voxel' % (vox_loop_time / nv))
     print ('setup throughput = %fs/model' % (inv_time / nm))
-    return best_losses, best_lambdas, models[best_models], return_params, mst_mean, mst_std
+    return best_losses, best_lambdas, [models[best_models],]+return_params+[mst_mean, mst_std]
 
 
     
-def get_predictions(data, _fmaps_fn, models, params, mst_avg=None, mst_std=None, aperture=1.0, _nonlinearity=None, sample_batch_size=100, voxel_batch_size=100):
+def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     """
     The predictive fwRF model for arbitrary input image.
 
@@ -333,90 +338,47 @@ def get_predictions(data, _fmaps_fn, models, params, mst_avg=None, mst_std=None,
         Input image block.
     _fmaps_fn: Torch module
         Torch module that returns a list of torch tensors.
-    models : ndarray, shape (#voxels, 3)
-        The RF model (x, y, sigma) associated with each voxel.
-    params : list of ndarray, shape (#voxels, #features)
-        Can contain a bias parameter of shape (#voxels) if add_bias is True.
-    mst_mean (optional): ndarray, shape (#voxels, #feature)
-        None if zscore is False. Otherwise returns zscoring average per feature.
-    mst_std (optional): ndarray, shape (#voxels, #feature)
-        None if zscore is False. Otherwise returns zscoring std.dev. per feature.
-    aperture (default: 1.0): scalar
-        The span of the stimulus in the unit used for the RF models.
-    _nonlinearity (default: None)
-        A nonlinearity expressed with torch's functions.
+    _fwrf_fn: Torch module
+	Torch module that compute the fwrf model for one batch of voxels
+    params: list including all of the following:
+    [
+        models : ndarray, shape (#voxels, 3)
+            The RF model (x, y, sigma) associated with each voxel.
+        weights : ndarray, shape (#voxels, #features)
+            Tuning weights
+        bias: Can contain a bias parameter of shape (#voxels) if add_bias is True.
+           Tuning biases: None if there are no bias
+        mst_mean (optional): ndarray, shape (#voxels, #feature)
+            None if zscore is False. Otherwise returns zscoring average per feature.
+        mst_std (optional): ndarray, shape (#voxels, #feature)
+            None if zscore is False. Otherwise returns zscoring std.dev. per feature.
+    ]
     sample_batch_size (default: 100)
         The sample batch size (used where appropriate)
-    voxel_batch_size (default: 100) 
-        The voxel batch size (used where appropriate)
 
     Returns
     -------
     pred : ndarray, shape (#samples, #voxels)
         The prediction of voxel activities for each voxels associated with the input data.
     """
-    dtype = params[0].dtype.type
+    dtype = data.dtype.type
     device = next(_fmaps_fn.parameters()).device
-    if mst_avg is not None:
-        assert mst_avg.dtype==dtype, 'dtype of parameters don\'t match'
-    if mst_avg is not None:
-        assert mst_std.dtype==dtype, 'dtype of parameters don\'t match'
-
-    nv = len(models)
-    if torch.is_tensor(data) and nv<=voxel_batch_size:
-        allow_grad = True ## all in one batch
-        nt = data.size()[0]
-        assert device==data.device, "Tensor input need to be on the same device as model"
-        _fmaps = _fmaps_fn(data)
-    else:   
-        nt = len(data)
-        _fmaps = _fmaps_fn(_to_torch(data[:sample_batch_size], device=device))
-
+    _params = [_p for _p in _fwrf_fn.parameters()]
+    voxel_batch_size = _params[0].size()[0] 
+    nt, nv = len(data), len(params[0])
+    _fmaps = _fmaps_fn(_to_torch(data[:sample_batch_size], device=device))
     pred = np.zeros(shape=(nt, nv), dtype=dtype)  
-    fmaps_rez = []
-    for k,_fm in enumerate(_fmaps):
-        assert _fm.size()[2]==_fm.size()[3], 'All feature maps need to be square'
-        fmaps_rez += [_fm.size()[2],]
-   
-    allow_grad = nv<=voxel_batch_size ## all in one batch
     start_time = time.time()
-
-    class default_grad(object):
-        def __enter__(self): 
-            print ('gradients on')
-        def __exit__(*x): pass
-
-    with torch.no_grad() if not allow_grad else default_grad():
+    with torch.no_grad():
         for rt,lt in iterate_range(0, nt, sample_batch_size):
-            if not allow_grad:
-            	_fmaps = _fmaps_fn(_to_torch(data[rt], device=device))
-
+            _fmaps = _fmaps_fn(_to_torch(data[rt], device=device))
             batch = np.zeros(shape=(lt,nv), dtype=dtype)
             for rv,lv in iterate_range(0, nv, voxel_batch_size):
                 sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
-                # create the pf stack for these voxels
-                if mst_avg is not None:
-                    _mstm = torch.t(_to_torch(mst_avg[rv], device=device)).requires_grad_(False) # [#features, #voxels]
-                if mst_std is not None:
-                    _msts = torch.t(_to_torch(mst_std[rv], device=device)).requires_grad_(False) # [#features, #voxels]
-                _pars = [_to_torch(p[rv], device=device).requires_grad_(False) for p in params] # [#voxels, #features]...
-
-                _pfs = [_to_torch(pnu.make_gaussian_mass_stack(models[rv,0], models[rv,1], models[rv,2], n_pix, size=aperture, dtype=dtype)[2], device=device).requires_grad_(False) for n_pix in fmaps_rez] # [nv, nx, nx]
-                _mst = torch.cat([torch.tensordot(_fm, _pf, dims=[[2,3], [1,2]]) for _fm,_pf in zip(_fmaps, _pfs)], dim=1) # [#samples, #features, #voxels] 
-                if _nonlinearity is not None:
-                    _mst = _nonlinearity(_mst)
-                if mst_avg is not None:              
-                    _mst -= _mstm[None]
-                if mst_std is not None:
-                    _mst /= _msts[None]
-
-                _mst = torch.transpose(torch.transpose(_mst, 0, 2), 1, 2)
-                _r = torch.squeeze(torch.bmm(_mst, torch.unsqueeze(_pars[0], 2))).t() # [#samples, #voxels]
-                if len(_pars)>1:
-                    _r += torch.unsqueeze(_pars[1], 0)
-                if allow_grad:
-                    return _r
-                batch[:,rv] = get_value(_r)
+                
+                _fwrf_fn.load_voxel_block(*[p[rv] if p is not None else None for p in params])
+                _r = _fwrf_fn(_fmaps)
+                batch[:,rv] = get_value(_r)[:,:lv]
             pred[rt,:] = batch
     total_time = time.time() - start_time
     print ('\n---------------------------------------')
