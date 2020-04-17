@@ -211,7 +211,7 @@ def learn_params_ridge_regression(data, voxels, _fmaps_fn, models, lambdas, aper
         return _beta, _loss
     
     #############################################################################
-    dtype = voxels.dtype.type
+    dtype = data.dtype.type
     device = next(_fmaps_fn.parameters()).device
     trn_size = len(voxels) - holdout_size
     assert trn_size>0, 'Training size needs to be greater than zero'
@@ -369,14 +369,14 @@ def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     nt, nv = len(data), len(params[0])
     pred = np.zeros(shape=(nt, nv), dtype=dtype)  
     start_time = time.time()
-
-    for rv, lv in iterate_range(0, nv, voxel_batch_size):
-        _fwrf_fn.load_voxel_block(*[p[rv] if p is not None else None for p in params])
-        pred_block = np.zeros(shape=(nt, lv), dtype=dtype)
-        for rt, lt in iterate_range(0, nt, sample_batch_size):
-            sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
-            pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device))))
-        pred[:,rv] = np.copy(pred_block)
+    with torch.no_grad():
+        for rv, lv in iterate_range(0, nv, voxel_batch_size):
+            _fwrf_fn.load_voxel_block(*[p[rv] if p is not None else None for p in params])
+            pred_block = np.zeros(shape=(nt, lv), dtype=dtype)
+            for rt, lt in iterate_range(0, nt, sample_batch_size):
+                sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
+                pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device))))
+            pred[:,rv] = np.copy(pred_block)
     total_time = time.time() - start_time
     print ('\n---------------------------------------')
     print ('total time = %fs' % total_time)
@@ -384,16 +384,3 @@ def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     print ('voxel throughput = %fs/voxel' % (total_time / nv))
     sys.stdout.flush()
     return pred
-
-
-
-#        for rt,lt in iterate_range(0, nt, sample_batch_size):
-#            _fmaps = _fmaps_fn(_to_torch(data[rt], device=device))
-#            batch = np.zeros(shape=(lt,nv), dtype=dtype)
-#            for rv,lv in iterate_range(0, nv, voxel_batch_size):
-#                sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
-#                
-#                _fwrf_fn.load_voxel_block(*[p[rv] if p is not None else None for p in params])
-#                _r = _fwrf_fn(_fmaps)
-#                batch[:,rv] = get_value(_r)[:,:lv]
-#            pred[rt,:] = np.copy(batch)
