@@ -56,12 +56,12 @@ def downsampling(fm_s, rf_s):
     
 class Torch_fwRF_voxel_block(nn.Module):
     def __init__(self, _fmaps_fn, _nonlinearity=None, \
-                 input_space=227, max_fpf_resolution=21, voxel_batch_size=1000, shared_fpf=False):
+                 input_shape=(1,3,227,227), max_fpf_resolution=21, voxel_batch_size=1000, shared_fpf=False):
         super(Torch_fwRF_voxel_block, self).__init__()
         ###
         nv = voxel_batch_size
         device = next(_fmaps_fn.parameters()).device
-        _x =torch.empty(1, 3, input_space, input_space, device=device).uniform_(0, 1)
+        _x =torch.empty((1,)+input_shape[1:], device=device).uniform_(0, 1)
         _fmaps = _fmaps_fn(_x)
         ###
         self.fmaps_shapes, self.fmaps_rez = [], []
@@ -231,7 +231,7 @@ def learn_params_gradient(data, voxels, _fmaps_fn, _fwrf_fn, \
                 best_epochs[rvimp] = epoch+1
             ## Then we print the results for this epoch:
             sys.stdout.write('\rvoxels [%6d:%-6d] of %d, epoch %3d of %3d, loss = %.6f (%d)' % (rv[0], rv[-1], nv, epoch+1, num_epochs, np.mean(cur_losses), np.sum(improvement)))     
-        #sys.stdout.flush()
+    sys.stdout.flush()
     return best_losses, best_epochs, best_param_values
 
 
@@ -243,16 +243,19 @@ def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     nt, nv = len(data), len(params[0])
     print ('val_size = %d' % nt)
     pred = np.full(fill_value=0, shape=(nt, nv), dtype=dtype)
-    start_time = time.time()    
-    for rv, lv in iterate_range(0, nv, voxel_batch_size):
-        _fwrf_fn.load_voxel_block(*[p[rv] for p in params])
-        pred_block = np.full(fill_value=0, shape=(nt, voxel_batch_size), dtype=dtype)
-        for rt, lt in iterate_range(0, nt, sample_batch_size):
-            pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device)))) 
-        pred[:,rv] = pred_block[:,:lv]
+    start_time = time.time()
+    with torch.no_grad():
+        for rv, lv in iterate_range(0, nv, voxel_batch_size):
+            _fwrf_fn.load_voxel_block(*[p[rv] for p in params])
+            pred_block = np.full(fill_value=0, shape=(nt, voxel_batch_size), dtype=dtype)
+            for rt, lt in iterate_range(0, nt, sample_batch_size):
+                sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
+                pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device)))) 
+            pred[:,rv] = pred_block[:,:lv]
     total_time = time.time() - start_time
     print ('---------------------------------------')
     print ('total time = %fs' % total_time)
     print ('sample throughput = %fs/sample' % (total_time / nt))
     print ('voxel throughput = %fs/voxel' % (total_time / nv))
+    sys.stdout.flush()
     return pred

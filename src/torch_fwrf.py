@@ -89,13 +89,13 @@ class Torch_fwRF_voxel_block(nn.Module):
     This is a variant of the fwRF model as a module for a voxel block (we can't have it all at once)
     '''
 
-    def __init__(self, _fmaps_fn, params, _nonlinearity=None, input_space=227, aperture=1.0):
+    def __init__(self, _fmaps_fn, params, _nonlinearity=None, input_shape=(1,3,227,227), aperture=1.0):
         super(Torch_fwRF_voxel_block, self).__init__()
         
         self.aperture = aperture
         models, weights, bias, mstmt, mstst = params
         device = next(_fmaps_fn.parameters()).device
-        _x =torch.empty(1, 3, input_space, input_space, device=device).uniform_(0, 1)
+        _x =torch.empty((1,)+input_shape[1:], device=device).uniform_(0, 1)
         _fmaps = _fmaps_fn(_x)
         self.fmaps_rez = []
         for k,_fm in enumerate(_fmaps):
@@ -267,20 +267,15 @@ def learn_params_ridge_regression(data, voxels, _fmaps_fn, models, lambdas, aper
                 if _nonlinearity is not None:
                     _mst = _nonlinearity(_mst)
                 mst[rt] = get_value(_mst)
-
             if zscore:  
                 mstm = np.mean(mst, axis=0, keepdims=True) #[:trn_size]
                 msts = np.std(mst, axis=0, keepdims=True) + 1e-6          
                 mst -= mstm
                 mst /= msts    
-
             if add_bias:
                 mst = np.concatenate([mst, np.ones(shape=(len(mst), 1), dtype=dtype)], axis=1)
-
             trn_mst = mst[:trn_size]
-            out_mst = mst[trn_size:]
-            trn_voxels = voxels[:trn_size]
-            out_voxels = voxels[trn_size:]    
+            out_mst = mst[trn_size:]   
 
             _xtrn = _to_torch(trn_mst, device=device)
             _xout = _to_torch(out_mst, device=device)           
