@@ -15,17 +15,12 @@ import torch.nn as nn
 import torch.nn.init as I
 import torch.nn.functional as F
 import torch.optim as optim
+from numpy_utility import iterate_range
 
 
 def _to_torch(x, device=None):
     return torch.from_numpy(x).float().to(device)
-def iterate_range(start, length, batchsize):
-    batch_count = int(length // batchsize )
-    residual = int(length % batchsize)
-    for i in range(batch_count):
-        yield range(start+i*batchsize, start+(i+1)*batchsize),batchsize
-    if(residual>0):
-        yield range(start+batch_count*batchsize,start+length),residual 
+
 def get_value(_x):
     return np.copy(_x.data.cpu().numpy())
 def set_value(_x, x):

@@ -79,11 +79,11 @@ def flatten_dict(base, append=''):
     flat = {}
     for k,v in base.items():
         if type(v)==dict:
-            flat.update(flatten_dict(v, append+k+'.'))
+            flat.update(flatten_dict(v, '%s%s.'%(append,k)))
         elif type(v)==list:
-            flat.update(flatten_dict({append+k+'@%d'%i: vv for i,vv in enumerate(v)}))
+            flat.update(flatten_dict({'%s%s@%d'%(append,k,i): vv for i,vv in enumerate(v)}))
         else:
-            flat[append+k] = v
+            flat['%s%s'%(append,k)] = v
     return flat
 
 def embed_dict(fd):
