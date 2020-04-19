@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.init as I
 import torch.nn.functional as F
 import torch.optim as optim
-from numpy_utility import iterate_range
+from src.numpy_utility import iterate_range
 
 
 def _to_torch(x, device=None):

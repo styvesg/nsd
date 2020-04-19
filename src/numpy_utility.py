@@ -3,7 +3,20 @@ import scipy.io as sio
 from scipy.special import erf
 import math
 
+def iterate_range(start, length, batchsize):
+    batch_count = int(length // batchsize )
+    residual = int(length % batchsize)
+    for i in range(batch_count):
+        yield range(start+i*batchsize, start+(i+1)*batchsize),batchsize
+    if(residual>0):
+        yield range(start+batch_count*batchsize,start+length),residual 
 
+def iterate_minibatches(inputs, targets, batchsize):
+    '''return inputs.shape[0]//batchsize batches plus one residual batches smaller than batchsize if needed'''
+    assert len(inputs) == len(targets)
+    for start_idx in range(0, len(inputs), batchsize):
+        excerpt = slice(start_idx, start_idx+batchsize)
+        yield inputs[excerpt], targets[excerpt]
 
 def create_downsampling_array(old_dim=(1,1), new_dim=(1,1), symmetric=True):
     ratios = (float(old_dim[0])/float(new_dim[0]), float(old_dim[1])/float(new_dim[1]))
