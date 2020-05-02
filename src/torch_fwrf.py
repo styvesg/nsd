@@ -113,18 +113,32 @@ class Torch_fwRF_voxel_block(nn.Module):
         self._nl = _nonlinearity
               
     def load_voxel_block(self, *params):
-        models, weights, bias, mstmt, mstst = params
+        models = params[0]
         for _pf,n_pix in zip(self.pfs, self.fmaps_rez):
             pf = pnu.make_gaussian_mass_stack(models[:,0], models[:,1], models[:,2], n_pix, size=self.aperture, dtype=np.float32)[2]
-            set_value(_pf, pf)
-        set_value(self.weights, weights)
-        if self.bias is not None:
-            set_value(self.bias, bias)
-        if self.mstm is not None:
-            set_value(self.mstm, mstmt.T)
-        if self.msts is not None:    
-            set_value(self.msts, mstst.T)
-        
+            if len(pf)<_pf.size()[0]:
+                pp = np.zeros(shape=_pf.size(), dtype=pf.dtype)
+                pp[:len(pf)] = pf
+                set_value(_pf, pp)
+            else:
+                set_value(_pf, pf)
+        for _p,p in zip([self.weights, self.bias], params[1:3]):
+            if _p is not None:
+                if len(p)<_p.size()[0]:
+                    pp = np.zeros(shape=_p.size(), dtype=p.dtype)
+                    pp[:len(p)] = p
+                    set_value(_p, pp)
+                else:
+                    set_value(_p, p)
+        for _p,p in zip([self.mstm, self.msts], params[3:]):
+            if _p is not None:
+                if len(p)<_p.size()[1]:
+                    pp = np.zeros(shape=(_p.size()[1], _p.size()[0]), dtype=p.dtype)
+                    pp[:len(p)] = p
+                    set_value(_p, pp.T)
+                else:
+                    set_value(_p, p.T)
+ 
     def forward(self, _fmaps):
         _mst = torch.cat([torch.tensordot(_fm, _pf, dims=[[2,3], [1,2]]) for _fm,_pf in zip(_fmaps, self.pfs)], dim=1) # [#samples, #features, #voxels] 
         if self._nl is not None:
@@ -351,18 +365,19 @@ def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     dtype = data.dtype.type
     device = next(_fmaps_fn.parameters()).device
     _params = [_p for _p in _fwrf_fn.parameters()]
-    voxel_batch_size = _params[0].size()[0] 
+    voxel_batch_size = _params[0].size()[0]    
     nt, nv = len(data), len(params[0])
-    pred = np.zeros(shape=(nt, nv), dtype=dtype)  
+    #print ('val_size = %d' % nt)
+    pred = np.full(fill_value=0, shape=(nt, nv), dtype=dtype)
     start_time = time.time()
     with torch.no_grad():
         for rv, lv in iterate_range(0, nv, voxel_batch_size):
             _fwrf_fn.load_voxel_block(*[p[rv] if p is not None else None for p in params])
-            pred_block = np.zeros(shape=(nt, lv), dtype=dtype)
+            pred_block = np.full(fill_value=0, shape=(nt, voxel_batch_size), dtype=dtype)
             for rt, lt in iterate_range(0, nt, sample_batch_size):
                 sys.stdout.write('\rsamples [%5d:%-5d] of %d, voxels [%6d:%-6d] of %d' % (rt[0], rt[-1], nt, rv[0], rv[-1], nv))
-                pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device))))
-            pred[:,rv] = np.copy(pred_block)
+                pred_block[rt] = get_value(_fwrf_fn(_fmaps_fn(_to_torch(data[rt], device)))) 
+            pred[:,rv] = pred_block[:,:lv]
     total_time = time.time() - start_time
     print ('\n---------------------------------------')
     print ('total time = %fs' % total_time)
