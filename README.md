@@ -5,7 +5,7 @@ Code and analysis of the NSD large scale fMRI dataset.
 insert image of the equation representing the model here
 
 ## torched_alexnet_fwrf.ipynb
-This notebook details the training process of the model. The models are saved in the following h5py files, one for each subject.
+This notebook details the training process of the model based on a restricted alexnet feature extractor. The models are saved in the following h5py files, one for each subject.
 
 - S1: S01/dnn_fwrf_Mar-27-2020_0301/model_params.h5py
 - S2: S02/dnn_fwrf_Apr-01-2020_0250/model_params.h5py
@@ -20,3 +20,9 @@ Currently, these files are on "NAS/styvesg/nsd_results/p3_full_brain_analysis/".
 
 ## torched_alexnet_fwrf_reload.ipynb
 This notebook demonstrate reloading the saved parameters and test reproduction of the prediction validation accuracy. We also demonstrate how the pixel-gradient can be obtained.
+
+## torched_gabor_fwrf.ipynb
+This notebook details the training process of the model based on a gabor wavelet feature extractor for complex cells. The models are saved in the following h5py files, one for each subject.
+
+- S1: S01/gabor_fwrf_May-24-2020_1943/model_params.h5py
+...
