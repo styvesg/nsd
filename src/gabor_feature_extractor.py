@@ -287,9 +287,9 @@ class Gaborizer(nn.Module):
         super(Gaborizer, self).__init__()
         
         self.num_orientations = num_orientations
-        self.freq_spacing = freq_spacing,
+        self.freq_spacing = freq_spacing
         self.pix_per_cycle = pix_per_cycle
-        self.cycles_per_radius = cycles_per_radius,
+        self.cycles_per_radius = cycles_per_radius
         self.radii_per_filter = radii_per_filter
         self.complex_cell = complex_cell
         self.pad_type = pad_type
@@ -325,7 +325,8 @@ class Gaborizer(nn.Module):
             self.imag_filters_tnsr = None
     
         #from table, get unique stim resolutions (corresponds to the diff. spatial frequencies being extracted)
-        stim_sizes = self.feature_table['pix per stimulus'].unique()
+        stim_sizes = self.feature_table['pix per stimulus'].unique()       
+        
         self.lowest_freq = np.min(stim_sizes) 
         self.highest_freq = np.max(stim_sizes) 
         self.num_sp_freq = len(stim_sizes)

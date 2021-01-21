@@ -116,11 +116,11 @@ class Alexnet_fmaps(nn.Module):
     https://github.com/pytorch/examples/blob/master/imagenet/main.py
     https://github.com/pytorch/vision/blob/master/torchvision/transforms/transforms.py
     '''
-    def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+    def __init__(self, pretrained=True, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
         super(Alexnet_fmaps, self).__init__()
         self.mean = nn.Parameter(torch.as_tensor(mean), requires_grad=False)
         self.std = nn.Parameter(torch.as_tensor(std), requires_grad=False)
-        self.extractor = build_alexnet_fmaps(pretrained=True)
+        self.extractor = build_alexnet_fmaps(pretrained=pretrained)
 
     def forward(self, _x):
         return self.extractor((_x - self.mean[None, :, None, None])/self.std[None, :, None, None])

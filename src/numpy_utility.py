@@ -18,83 +18,64 @@ def iterate_minibatches(inputs, targets, batchsize):
         excerpt = slice(start_idx, start_idx+batchsize)
         yield inputs[excerpt], targets[excerpt]
 
-def create_downsampling_array(old_dim=(1,1), new_dim=(1,1), symmetric=True):
-    ratios = (float(old_dim[0])/float(new_dim[0]), float(old_dim[1])/float(new_dim[1]))
-    i_ratios = (int(np.ceil(ratios[0])), int(np.ceil(ratios[1])))
-    x_range = np.arange(float(0), float(old_dim[0]) + ratios[0]/2, ratios[0])
-    y_range = np.arange(float(0), float(old_dim[1]) + ratios[1]/2, ratios[1])   
+        
+def create_downsampling_vector(old_dim=1, new_dim=1, symmetric=True, preserve_norm=True):
+    ratio = float(old_dim)/float(new_dim)
+    x_range = np.arange(float(0), float(old_dim) + ratio/2, ratio)
+    
     x_min = np.floor(x_range).astype(int)
     x_max = np.ceil(x_range).astype(int)
     x_min_frac = x_range - x_min
-    x_max_frac = x_max - x_range      
-    x_stack = []
+    x_max_frac = x_max - x_range
+    stack = []
     for k,(xi,xf) in enumerate(zip(x_max[:-1], x_min[1:])):
-        z = np.zeros(old_dim[0])
+        z = np.zeros(old_dim)
         z[xi:xf] = np.ones(xf-xi)
         if xi>0:
             z[xi-1] = x_max_frac[k]
-        if xf<old_dim[0]:
+        if xf<old_dim:
             z[xf] = x_min_frac[k+1]
-        x_stack += [z,]
-    ###
-    y_min = np.floor(y_range).astype(int)
-    y_max = np.ceil(y_range).astype(int)
-    y_min_frac = y_range - y_min
-    y_max_frac = y_max - y_range      
-    y_stack = []
-    for k,(xi,xf) in enumerate(zip(y_max[:-1], y_min[1:])):
-        z = np.zeros(old_dim[1])
-        z[xi:xf] = np.ones(xf-xi)
-        if xi>0:
-            z[xi-1] = y_max_frac[k]
-        if xf<old_dim[1]:
-            z[xf] = y_min_frac[k+1]
-        y_stack += [z,]        
+        stack += [z,]
     # create a matrix that re-mix the entries
+    if preserve_norm:
+        return np.array(stack)
+    else:
+        stack = np.array(stack)
+        return stack / np.sum(stack, axis=1, keepdims=True)
+
+def create_upsampling_vector(old_dim=1, new_dim=1, symmetric=True, preserve_norm=True):
+    ratio = float(new_dim)/float(old_dim-1)
+    x_range = np.arange(float(0), float(new_dim) + ratio/2, ratio)
     stack = []
-    for vx in np.array(x_stack) / ratios[0]:
-        for vy in np.array(y_stack) / ratios[1]:
-            stack += [np.outer(vx,vy),]
-    return np.array(stack).reshape((len(stack), -1))
-
-
-def create_upsampling_array(old_dim=(1,1), new_dim=(1,1), symmetric=True):
-    ratios = (float(new_dim[0])/float(old_dim[0]-1), float(new_dim[1])/float(old_dim[1]-1))
-    x_range = np.arange(float(0), float(new_dim[0]) + ratios[0]/2, ratios[0])
-    y_range = np.arange(float(0), float(new_dim[1]) + ratios[1]/2, ratios[1])  
-    x_stack = []
-    for k,v in enumerate(np.arange(0,new_dim[0]+1e-3,float(new_dim[0])/(new_dim[0]-1))):
-        z = np.zeros(old_dim[0])
-        i = int(np.floor(v / ratios[0])) 
-        if i+1<old_dim[0]:
+    for k,v in enumerate(np.arange(0,new_dim+1e-3,float(new_dim)/(new_dim-1))):
+        z = np.zeros(old_dim)
+        i = int(np.floor(v / ratio)) 
+        if i+1<old_dim:
             d = (v - x_range[i]) / (x_range[i+1] - x_range[i])
             z[i], z[i+1] = 1-d, d
         else:
             z[i] = 1.0 
-        x_stack += [z,]
-    y_stack = []
-    for k,v in enumerate(np.arange(0,new_dim[1]+1e-3,float(new_dim[1])/(new_dim[1]-1))):
-        z = np.zeros(old_dim[1])
-        i = int(np.floor(v / ratios[1])) 
-        if i+1<old_dim[1]:
-            d = (v - y_range[i]) / (y_range[i+1] - y_range[i])
-            z[i], z[i+1] = 1-d, d
-        else:
-            z[i] = 1.0 
-        y_stack += [z,]        
-    # create a matrix that re-mix the entries
-    stack = []
-    for vx in np.array(x_stack):
-        for vy in np.array(y_stack):
-            stack += [np.outer(vx,vy),]
-    return np.array(stack).reshape((len(stack), -1))   
-    
-    
-def create_sampling_array(old_dim=(1,1), new_dim=(1,1), symmetric=True):
-    if new_dim>old_dim:
-        return create_upsampling_array(old_dim, new_dim, symmetric) 
+        stack += [z,]
+    stack = np.array(stack)
+    if preserve_norm:
+        return stack / np.sum(stack, axis=0)
     else:
-        return create_downsampling_array(old_dim, new_dim, symmetric)
+        return stack
+
+def create_sampling_vector(old_dim=1, new_dim=1, symmetric=True, preserve_norm=True):
+    if new_dim>old_dim:
+        return create_upsampling_vector(old_dim, new_dim, symmetric, preserve_norm=preserve_norm) 
+    else:
+        return create_downsampling_vector(old_dim, new_dim, symmetric, preserve_norm=preserve_norm)
+    
+def create_sampling_array(old_dim=(1,1), new_dim=(1,1), symmetric=True, preserve_norm=True):
+    ux = create_sampling_vector(old_dim[0], new_dim[0], symmetric=symmetric, preserve_norm=preserve_norm)
+    uy = create_sampling_vector(old_dim[1], new_dim[1], symmetric=symmetric, preserve_norm=preserve_norm)
+    stack = []
+    for vx in np.array(ux):
+        for vy in np.array(uy):
+            stack += [np.outer(vx,vy),]
+    return np.array(stack).reshape((len(stack), -1))
 
 
 def make_gaussian(x, y, sigma, n_pix, size=None, dtype=np.float32):

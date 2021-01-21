@@ -292,7 +292,7 @@ def get_predictions(data, _fmaps_fn, _fwrf_fn, params, sample_batch_size=100):
     _fmaps_fn: Torch module
         Torch module that returns a list of torch tensors.
     _fwrf_fn: Torch module
-	Torch module that compute the fwrf model for one batch of voxels
+    Torch module that compute the fwrf model for one batch of voxels
     params: list including all of the following:
     [
         models : ndarray, shape (#voxels, 3)

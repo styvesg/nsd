@@ -61,7 +61,7 @@ def get_last_token(s, tokens={'@': list, '.': dict}):
     return name, entry, t
 
 
-def has_token(s, tokens={'@': list, '.': dict}):
+def has_token(s, tokens=['@', '.']):
     isin = False
     for tok in tokens:
         if tok in s:
@@ -88,7 +88,6 @@ def flatten_dict(base, append=''):
 
 def embed_dict(fd):
     d = {}
-    
     for k,v in fd.items():
         name, entry, ty = get_last_token(k, {'@': list, '.': dict})
         if ty==list:
@@ -102,8 +101,11 @@ def embed_dict(fd):
             else:
                 d[name] = {entry: v}
         else:
-            d[k] = v   
-    return embed_dict(d) if has_token(''.join(d.keys()), tokens={'@': list, '.': dict}) else d
+            if k in d.keys():
+                d[k].update(v)
+            else:
+                d[k] = v   
+    return embed_dict(d) if has_token(''.join(d.keys()), tokens=['@', '.']) else d
 
 
 ### NIFTY STUFF ###
