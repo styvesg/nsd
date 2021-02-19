@@ -22,8 +22,7 @@ def load_beta_file(filename, voxel_mask=None, zscore=True):
         if voxel_mask is None:
             beta = values.reshape((len(values), -1)).astype(np.float32) / 300.
         else:
-            beta = values.reshape((len(values), -1))[:,voxel_mask.flatten()].astype(np.float32) / 300.       
-        
+            beta = values.reshape((len(values), -1))[:,voxel_mask.flatten()].astype(np.float32) / 300.               
     elif ".h5" in filename:
         print (".h5 not yet implemented")
         return None
@@ -40,13 +39,14 @@ def load_beta_file(filename, voxel_mask=None, zscore=True):
      
 
 
-def load_betas(folder_name, zscore=False, voxel_mask=None, up_to=0):
+def load_betas(folder_name, zscore=False, voxel_mask=None, up_to=0, load_ext='.mat'):
     '''load beta value in the structure of the NSD experiemnt'''
     from src.file_utility import list_files
     matfiles, betas = [], []
     k = 0
     for filename in list_files(folder_name):
-        if ".mat" in filename:
+        filename_no_path = filename.split('/')[-1]
+        if 'betas' in filename_no_path and load_ext in filename_no_path:
             k += 1
             if up_to>0 and k>up_to:
                 break
@@ -54,3 +54,41 @@ def load_betas(folder_name, zscore=False, voxel_mask=None, up_to=0):
             matfiles += [filename,]  
             betas += [ load_beta_file(filename, voxel_mask=voxel_mask, zscore=zscore), ]       
     return np.concatenate(betas, axis=0), matfiles
+    
+    
+def image_feature_fn(image):
+    '''take uint8 image and return floating point (0,1), either color or bw'''
+    return image.astype(fpX) / 255
+#    data = image.astype(fpX) / 255
+#    return (0.2126*data[:,0:1]+ 0.7152*data[:,1:2]+ 0.0722*data[:,2:3]).astype(np.float32)
+#    return np.repeat(stim_data, axis=1, repeats=3)
+    
+    
+    
+def data_split(stim, voxel, ordering, imagewise=True):
+    data_size, nv = voxel.shape 
+    print ("Total number of voxels = %d" % nv)
+    ordering_data = ordering[:data_size]
+    shared_mask = ordering_data<1000  # the first 1000 indices are the shared indices
+
+    val_voxel_st = voxel[shared_mask]    
+    val_stim_st  = stim[ordering_data[shared_mask]]
+ 
+    idx, idx_count = np.unique(ordering_data, return_counts=True)
+    idx_list = [ordering_data==i for i in idx]
+    voxel_avg_data = np.zeros(shape=(len(idx), nnv[s]), dtype=np.float32)
+    for i,m in enumerate(idx_list):
+        voxel_avg_data[i] = np.mean(voxel_data['%s'%s][m], axis=0)
+    shared_mask_mt = idx<1000
+
+    val_voxel_mt = voxel_avg_data[shared_mask_mt]  
+    val_stim_mt  = stim[idx][shared_mask_mt]        
+    
+    if imagewise:
+        trn_voxel = voxel_avg_data[~shared_mask_mt]
+        trn_stim  = stim[idx][~shared_mask_mt] 
+        return trn_stim, trn_voxel, val_stim_st, val_voxel_st, val_stim_mt, val_voxel_mt
+    else:
+        trn_voxel = voxel[~shared_mask]
+        trn_stim = stim[ordering_data[~shared_mask]]
+        return trn_stim, trn_voxel, val_stim_st, val_voxel_st, val_stim_mt, val_voxel_mt
