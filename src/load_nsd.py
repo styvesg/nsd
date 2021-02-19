@@ -58,7 +58,7 @@ def load_betas(folder_name, zscore=False, voxel_mask=None, up_to=0, load_ext='.m
     
 def image_feature_fn(image):
     '''take uint8 image and return floating point (0,1), either color or bw'''
-    return image.astype(fpX) / 255
+    return image.astype(np.float32) / 255
 #    data = image.astype(fpX) / 255
 #    return (0.2126*data[:,0:1]+ 0.7152*data[:,1:2]+ 0.0722*data[:,2:3]).astype(np.float32)
 #    return np.repeat(stim_data, axis=1, repeats=3)
@@ -76,9 +76,9 @@ def data_split(stim, voxel, ordering, imagewise=True):
  
     idx, idx_count = np.unique(ordering_data, return_counts=True)
     idx_list = [ordering_data==i for i in idx]
-    voxel_avg_data = np.zeros(shape=(len(idx), nnv[s]), dtype=np.float32)
+    voxel_avg_data = np.zeros(shape=(len(idx), nv), dtype=np.float32)
     for i,m in enumerate(idx_list):
-        voxel_avg_data[i] = np.mean(voxel_data['%s'%s][m], axis=0)
+        voxel_avg_data[i] = np.mean(voxel[m], axis=0)
     shared_mask_mt = idx<1000
 
     val_voxel_mt = voxel_avg_data[shared_mask_mt]  

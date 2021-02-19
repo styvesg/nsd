@@ -149,8 +149,8 @@ def learn_params_(_trn_fn, _hld_fn, _pred_fn, _ext, _cons, _opts, stims, voxels,
             holdout_size=holdout_size, random=randomize)
     
     hold_hist, trn_hist = [], []
-    hold_cc_hist = {s: [] for s in trn_subjects}
-    val_cc_hist = {s: [] for s in trn_subjects}
+    hold_cc_hist = {s: [] for s in voxels.keys()}
+    val_cc_hist = {s: [] for s in voxels.keys()}
     best_joint_cc_score = float(0)
     best_params = {}
     best_epoch = 0
