@@ -10,9 +10,14 @@ This notebook details the training process of the model based on a restricted al
 ### torched_alexnet_fwrf_reload.ipynb
 This notebook demonstrate reloading the saved parameters and test reproduction of the prediction validation accuracy. We also demonstrate how the pixel-gradient can be obtained.
 
+## The Gabor-based model
+Model description
 
-## torched_gabor_fwrf.ipynb
+### torched_gabor_fwrf.ipynb
 This notebook details the training process of the model based on a gabor wavelet feature extractor for complex cells.
 
-## torched_joined_gnet_encoding_multisubjecty.ipynb
+
+## The GNet-based (data-driven) encoding model
+
+### torched_joined_gnet_encoding_multisubjecty.ipynb
 This notebook details the joint training of the GNet feature extractor on V1-V4.
