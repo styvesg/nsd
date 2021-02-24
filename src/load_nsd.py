@@ -59,9 +59,10 @@ def load_betas(folder_name, zscore=False, voxel_mask=None, up_to=0, load_ext='.m
 def image_feature_fn(image):
     '''take uint8 image and return floating point (0,1), either color or bw'''
     return image.astype(np.float32) / 255
-#    data = image.astype(fpX) / 255
-#    return (0.2126*data[:,0:1]+ 0.7152*data[:,1:2]+ 0.0722*data[:,2:3]).astype(np.float32)
-#    return np.repeat(stim_data, axis=1, repeats=3)
+
+def image_uncolorize_fn(image):
+    data = image.astype(np.float32) / 255
+    return (0.2126*data[:,0:1]+ 0.7152*data[:,1:2]+ 0.0722*data[:,2:3])
     
     
     
