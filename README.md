@@ -1,5 +1,5 @@
 # NSD
-Code and analysis of the NSD large scale fMRI dataset. We consider multiple model variant where the feature extractor varies, the connection model varies, and the training method vary to a method appropriate to the connection model. Some model, voxel-wise, were applied to whole brain activity whereas other, trained jointly, required a narrower scope due to memory restrictions.
+Prototypes of task-driven and data-driven encoding models for the NSD large scale fMRI dataset. We consider multiple model variant where the feature extractor varies, the connection model varies, and the training method vary to a method appropriate to the connection model. Some model, voxel-wise, were applied to whole brain activity whereas other, trained jointly, required a narrower scope due to memory restrictions.
 
 All models can be mapped into the following diagram:
 
