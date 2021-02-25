@@ -29,6 +29,8 @@ This notebook details the training process of the model based on a gabor wavelet
 An extension of the previous notebook to load a analyse multiple subject at once.
 
 ## The GNet-based (data-driven) encoding model
+In this case, the feature extractor (referred to as GNet) has to be trained along with the connection model (referred to as flexible in panel B above, right) via stochastic gradient descent. While this incurs a cost in terms of regularization, it is also more expressive for voxels with high SNR, which is beneficial for the early visual cortex. However, this method requires joint training of multiple voxel target and is unsuitable for whole brain modelling (other than piecewise). This is why the notebook below focuses on ROI V1 to V4 on 4 subjects. Alternately, we can model V1 alone for 8 subjects, or the nsdgeneral mask for 2 subjects.
+
 
 ### torched_joined_gnet_encoding_multisubject.ipynb
 This notebook details the joint training of the GNet feature extractor on brain ROI V1-V4.
