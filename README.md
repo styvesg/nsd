@@ -3,7 +3,7 @@ Code and analysis of the NSD large scale fMRI dataset. We consider multiple mode
 
 All models can be mapped into the following diagram:
 
-![Model diagram](model_diagram_paper.png | width=200)
+<img src="model_diagram_paper.png" width="200">
 
 ## The fwRF encoding model
 The fwRF utilize a fixed gaussian pooling field (panel B above, left) with 3 parameters trained via line-search on a fixed set of candidate. The feature tuning utilize a rich, multilayer, feature sets and it is trained with ridge regression. This method provides very effective regularization and, since it is voxelwise and takes advatage of massive parallelization of the model candidates, it is most suitable for large numbers of voxels (i.e. whole brain model regression).
