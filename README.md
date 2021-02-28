@@ -9,11 +9,11 @@ All models can be mapped into the following diagram:
 
 
  
-## The fwRF encoding model
+## The Alexnet-based fwRF encoding model
 The fwRF utilize a fixed gaussian pooling field (panel B above, right) with 3 parameters trained via line-search on a fixed set of candidate. The feature tuning utilize a rich, multilayer, feature sets and it is trained with ridge regression. This method provides very effective regularization and, since it is voxelwise and takes advatage of massive parallelization of the model candidates, it is most suitable for large numbers of voxels (i.e. whole brain model regression).
 
 ### torched_alexnet_fwrf.ipynb
-This notebook details the training process of the model based on a restricted alexnet feature extractor.
+This notebook details the training process of the model based on a restricted (only a predetermined number of features with high variance to the training set are selected) alexnet feature extractor.
 
 ### torched_alexnet_fwrf_reload.ipynb
 This notebook demonstrate reloading the saved parameters and test reproduction of the prediction validation accuracy. We also demonstrate how the pixel-gradient can be obtained for a block of voxels.
@@ -21,7 +21,7 @@ This notebook demonstrate reloading the saved parameters and test reproduction o
 ### torched_alexnet_fwrf_encoding_scaling.ipynb
 An extension of the previous notebook to load a analyse multiple subject at once.
 
-## The Gabor-based model
+## The Gabor-based fwRF model
 The gabor model utilize a set of wavelet filter pairs at various, log-spaced, spatial frequencies. It is effectively a single layer network under our general framework above and it is trained with the fwRF connection model.
 
 ### torched_gabor_fwrf.ipynb
