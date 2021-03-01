@@ -113,8 +113,8 @@ def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
     maxdecade = int(np.ceil(np.log10(maxcount)))
     
     adv = np.sum(ax1[0]) / (np.sum(ax1[0])+np.sum(ax2[0]))
-    g.ax_marg_x.text(-0.45, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
-    g.ax_marg_x.text( 0.35, 50., '%.2f' % (1.-adv), horizontalalignment='left', fontsize=18, color=color2, weight='bold')
+    g.ax_marg_x.text(xlim[0]+0.02, 50., '%.2f' % adv, horizontalalignment='left', fontsize=18, color=color1, weight='bold')
+    g.ax_marg_x.text(xlim[1]-0.06, 50., '%.2f' % (1.-adv), horizontalalignment='left', fontsize=18, color=color2, weight='bold')
     g.ax_marg_x.set_ylim([0.5, 5e2])
     
     g.ax_marg_x.get_yaxis().reset_ticks()
@@ -127,8 +127,8 @@ def plot_fwrf_paper_compare(X, Y, threshold, xlim, ylim, cmap='Blues'):
 
     g.ax_joint.plot(np.zeros(len(ylim)), ylim, ':k', lw=2)
     #g.ax_joint.plot(xlim, np.ones(len(xlim)) * threshold, '--r', lw=2)
-    g.ax_joint.plot([0., xlim[1]], [threshold, threshold -  xlim[1] / 2], '--r', lw=2)
-    g.ax_joint.plot([xlim[0], 0.], [threshold +  xlim[0] / 2, threshold], '--r', lw=2)
+    #g.ax_joint.plot([0., xlim[1]], [threshold, threshold -  xlim[1] / 2], '--r', lw=2)
+    #g.ax_joint.plot([xlim[0], 0.], [threshold +  xlim[0] / 2, threshold], '--r', lw=2)
     plt.gca().set_xlabel('X-Y')
     plt.gca().set_ylabel('(X+Y)/2')
     return g
