@@ -15,7 +15,8 @@ class TrunkBlock(L.Module):
         self.bn1 = L.BatchNorm2d(feat_in, eps=1e-05, momentum=0.25, affine=True, track_running_stats=True)
 
         I.xavier_normal_(self.conv1.weight, gain=I.calculate_gain('relu'))
-        I.constant_(self.conv1.bias, 0.0)
+        #I.normal_(self.conv1.bias, 0., 1.)
+        I.constant_(self.conv1.bias, 0.0) # current
         
     def forward(self, x):
         return F.relu(self.conv1(self.drop1(self.bn1(x))))
@@ -56,6 +57,8 @@ class EncStage(L.Module):
         self.conv6b  = TrunkBlock(2*self.tw, self.tw)
         ##
         I.xavier_normal_(self.conv3.weight, gain=I.calculate_gain('relu'))
+        
+        #I.normal_(self.conv3.bias, 0., 1.)
         I.constant_(self.conv3.bias, 0.0)
         
     def forward(self, x):

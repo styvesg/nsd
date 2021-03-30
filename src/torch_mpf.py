@@ -130,9 +130,11 @@ class Torch_LayerwiseFWRF(L.Module):
             rf = L.Parameter(T.tensor(np.ones(shape=(self.nv, fm_rez[2], fm_rez[2]), dtype=dtype), requires_grad=True))
             self.register_parameter('rf%d'%k, rf)
             self.rfs += [rf,]
-        self.w  = L.Parameter(T.tensor(np.random.normal(0, 0.001, size=(self.nv, self.nf)).astype(dtype=dtype), requires_grad=True))
-        self.b  = L.Parameter(T.tensor(np.full(fill_value=0.0, shape=(self.nv,), dtype=dtype), requires_grad=True))
-
+        #self.w  = L.Parameter(T.tensor(np.random.normal(0, 0.001, size=(self.nv, self.nf)).astype(dtype=dtype), requires_grad=True))
+        #self.b  = L.Parameter(T.tensor(np.full(fill_value=0.0, shape=(self.nv,), dtype=dtype), requires_grad=True))
+        self.w  = L.Parameter(T.tensor(np.random.normal(0, 0.01, size=(self.nv, self.nf)).astype(dtype=dtype), requires_grad=True))
+        self.b  = L.Parameter(T.tensor(np.random.normal(0, 0.01, size=(self.nv,)).astype(dtype=dtype), requires_grad=True))
+        
     def forward(self, fmaps):
         phi = []
         for fm,rf in zip(fmaps, self.rfs): #, self.scales):

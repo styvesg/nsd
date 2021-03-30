@@ -108,8 +108,8 @@ def subject_holdout_pass(_hld_fn, _ext, _cons, x, v, batch_size):
 
 #################################################
 def subject_pred_pass(_pred_fn, _ext, _con, x, v, batch_size):
-    pred = np.zeros_like(v)
-    for rb,_ in iterate_range(0, len(v), batch_size):
+    pred = np.zeros(shape=(len(x), v.shape[1]), dtype=v.dtype)
+    for rb,_ in iterate_range(0, len(x), batch_size):
         pred[rb] = get_value(_pred_fn(_ext, _con, x[rb]))
     return pred
 def subject_validation_pass(_pred_fn, _ext, _con, x, v, batch_size):
