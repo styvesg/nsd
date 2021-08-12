@@ -66,6 +66,37 @@ def image_uncolorize_fn(image):
     
     
     
+def ordering_split(voxel, ordering, combine_trial=False):
+    data_size, nv = voxel.shape 
+    print ("Total number of voxels = %d" % nv)
+    ordering_data = ordering[:data_size]
+    shared_mask = ordering_data<1000  # the first 1000 indices are the shared indices
+    
+    if combine_trial:        
+        idx, idx_count = np.unique(ordering_data, return_counts=True)
+        idx_list = [ordering_data==i for i in idx]
+        voxel_avg_data = np.zeros(shape=(len(idx), nv), dtype=np.float32)
+        for i,m in enumerate(idx_list):
+            voxel_avg_data[i] = np.mean(voxel[m], axis=0)
+        shared_mask_mt = idx<1000
+
+        val_voxel_data = voxel_avg_data[shared_mask_mt] 
+        val_stim_ordering = idx[shared_mask_mt]   
+
+        trn_voxel_data = voxel_avg_data[~shared_mask_mt]
+        trn_stim_ordering = idx[~shared_mask_mt]              
+        
+    else:
+        val_voxel_data = voxel[shared_mask]    
+        val_stim_ordering  = ordering_data[shared_mask]
+
+        trn_voxel_data = voxel[~shared_mask]
+        trn_stim_ordering  = ordering_data[~shared_mask]
+        
+    return trn_stim_ordering, trn_voxel_data, val_stim_ordering, val_voxel_data
+
+
+
 def data_split(stim, voxel, ordering, imagewise=True):
     data_size, nv = voxel.shape 
     print ("Total number of voxels = %d" % nv)

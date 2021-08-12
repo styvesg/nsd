@@ -71,12 +71,14 @@ class Torch_FWRF(L.Module):
         self.dl = []
         self.ul = []
         print (self.nf, rf_rez, rf_rez)
-        for fm_rez in self.fmaps_shapes:
+        for k,fm_rez in enumerate(self.fmaps_shapes):
             if fm_rez[2]>1:
                 d, u = downsampling(fm_rez[2], rf_rez)
                 self.dl += [d,]
                 if u is not None:
-                    self.ul += [T.tensor(u.astype(dtype), requires_grad=False).to(device),]
+#                    self.ul += [T.tensor(u.astype(dtype), requires_grad=False).to(device),]
+                    self.ul += [T.tensor(u.astype(dtype), requires_grad=False),]
+                    self.register_buffer('sc%d'%k, self.ul[-1], persistent=False)
                     if d<0: # downsample rf
                         print ('rescale from', [rf_rez, rf_rez], 'to', fm_rez[2:4])
                     elif d>0: # downsample fm
@@ -91,7 +93,7 @@ class Torch_FWRF(L.Module):
               
     def forward(self, fmaps):
         phi = []
-        for fm,d,u in zip(fmaps, self.dl, self.ul):
+        for k,(fm,d,u) in enumerate(zip(fmaps, self.dl, self.ul)):
             if self.pre_nl is not None:
                 f = self.pre_nl(fm)
             else:
@@ -99,9 +101,11 @@ class Torch_FWRF(L.Module):
             if d is not None:
                 g = T.reshape(self.sm(T.flatten(self.rfs[0], start_dim=1)), self.rfs[0].size())
                 if d<0: # downsample rf
-                    g = apply_downsampling(g, u, start_dim=1)
+                    g = apply_downsampling(g, getattr(self, 'sc%d'%k), start_dim=1)
+                    # for some weird reason, torch doesn't transfer the buffer to gpu correectly when refered via the member variable, but correctly when refering to the attribute name. There is a new interface in torch v1.9
+                    
                 elif d>0: # downsample fm               
-                    f = apply_downsampling(f, u, start_dim=2)
+                    f = apply_downsampling(f, getattr(self, 'sc%d'%k), start_dim=2)
                 # fmaps : [batch, features, space]
                 # v     : [nv, space]            
                 phi += [T.tensordot(g,f, dims=[[1,2], [2,3]]),] # apply pooling field and add to list.
@@ -162,7 +166,7 @@ class Torch_FWRF_Block(L.Module):
         super(Torch_FWRF_Block, self).__init__()
         #self.bns = nn.ModuleList([torch.nn.BatchNorm2d(fm.size()[1], eps=1e-05, momentum=0.25, affine=True, track_running_stats=True)
         #                         for fm in fmaps])
-        self.fwrf = Torch_FWRF(fmaps, rf_rez=rf_rez, nv=block_nv, pre_nl=pre_nl, post_nl=post_nl, dtype=np.float32)
+        self.fwrf = Torch_FWRF(fmaps, rf_rez=rf_rez, nv=block_nv, pre_nl=pre_nl, post_nl=post_nl, dtype=dtype)
         # save initial param values
         self.weight_init_value = copy.deepcopy(self.fwrf.state_dict())
         
@@ -180,7 +184,7 @@ class Torch_LayerwiseFWRF_Block(L.Module):
         super(Torch_LayerwiseFWRF_Block, self).__init__()
         #self.bns = nn.ModuleList([torch.nn.BatchNorm2d(fm.size()[1], eps=1e-05, momentum=0.25, affine=True, track_running_stats=True)
         #                         for fm in fmaps])
-        self.fwrf = Torch_LayerwiseFWRF(fmaps, nv=block_nv, pre_nl=pre_nl, post_nl=post_nl, dtype=np.float32)
+        self.fwrf = Torch_LayerwiseFWRF(fmaps, nv=block_nv, pre_nl=pre_nl, post_nl=post_nl, dtype=dtype)
         # save initial param values
         self.weight_init_value = copy.deepcopy(self.fwrf.state_dict())
         

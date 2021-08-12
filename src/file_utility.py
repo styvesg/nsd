@@ -29,7 +29,14 @@ import nibabel as nib
 #print (edict)
 #
 #
-
+def zip_dict(*args):
+    '''
+    like zip but applies to multiple dicts with matching keys, returning a single key and all the corresponding values for that key.
+    '''
+    for a in args[1:]:
+        assert (a.keys()==args[0].keys())
+    for k in args[0].keys():
+        yield [k,] + [a[k] for a in args]
 
 def save_stuff(save_to_this_file, data_objects_dict):
     failed = []

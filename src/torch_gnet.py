@@ -70,6 +70,8 @@ class EncStage(L.Module):
         c6a = self.conv6a(c5b)
         c6b = self.conv6b(c6a)
         
+        #return [T.cat([c3, c4a[:,:self.tw], c4b[:,:self.tw]], dim=1)], c4b
+    
         return [T.cat([c3, c4a[:,:self.tw], c4b[:,:self.tw]], dim=1), 
                 T.cat([c5a[:,:self.tw], c5b[:,:self.tw], c6a[:,:self.tw], c6b], dim=1)], c6b
         

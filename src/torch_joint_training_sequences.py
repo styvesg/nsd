@@ -107,8 +107,9 @@ def subject_holdout_pass(_hld_fn, _ext, _cons, x, v, batch_size):
     return val_err / sum(len(xx) for s,xx in x.items())
 
 #################################################
-def subject_pred_pass(_pred_fn, _ext, _con, x, v, batch_size):
-    pred = np.zeros(shape=(len(x), v.shape[1]), dtype=v.dtype)
+def subject_pred_pass(_pred_fn, _ext, _con, x, batch_size):
+    pred = _pred_fn(_ext, _con, x[:batch_size])
+    pred = np.zeros(shape=(len(x), pred.shape[1]), dtype=np.float32)
     for rb,_ in iterate_range(0, len(x), batch_size):
         pred[rb] = get_value(_pred_fn(_ext, _con, x[rb]))
     return pred
